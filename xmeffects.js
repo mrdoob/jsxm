@@ -337,6 +337,23 @@ function eff_t0_x(ch, data) {  // extra fine portamento
   }
 }
 
+function eff_t0_t(ch, data) {  // tremor
+  if (data) {
+    ch.tremoroncycles = (data >> 4) + 1;
+    ch.tremoroffcycles = (data & 0x0f) + 1;
+  }
+}
+
+function eff_t1_t(ch) {  // tremor
+  if (ch.tremoroncycles === undefined) return;
+  ch.tremorcounter = (ch.tremorcounter || 0) + 1;
+  var total = ch.tremoroncycles + ch.tremoroffcycles;
+  if (ch.tremorcounter >= total) ch.tremorcounter = 0;
+  if (ch.tremorcounter >= ch.tremoroncycles) {
+    ch.voloffset = -ch.vol;  // mute during off phase
+  }
+}
+
 function eff_t0_l(ch, data) {  // set envelope position
   if (ch.env_vol) {
     ch.env_vol.tick = data;
@@ -387,7 +404,7 @@ player.effects_t0 = [  // effect functions on tick 0
   eff_unimplemented_t0,  // q
   eff_t0_r,  // r
   eff_unimplemented_t0,  // s
-  eff_unimplemented_t0,  // t
+  eff_t0_t,  // t
   eff_unimplemented_t0,  // u
   eff_unimplemented_t0,  // v
   eff_unimplemented_t0,  // w
@@ -426,7 +443,7 @@ player.effects_t1 = [  // effect functions on tick 1+
   eff_unimplemented,  // q
   eff_t1_r,  // r
   eff_unimplemented,  // s
-  eff_unimplemented,  // t
+  eff_t1_t,  // t
   eff_unimplemented,  // u
   eff_unimplemented,  // v
   eff_unimplemented,  // w
