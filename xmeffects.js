@@ -197,6 +197,9 @@ function eff_t0_e(ch, data) {  // extended effects!
         }
       }
       break;
+    case 7:  // set tremolo waveform
+      ch.tremolotype = data & 0x07;
+      break;
     case 8:  // panning
       ch.pan = data * 0x11;
       break;
