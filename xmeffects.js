@@ -222,7 +222,14 @@ function eff_t0_e(ch, data) {  // extended effects!
       ch.vol = Math.max(0, ch.vol - data);
       ch.finevoldown = data;
       break;
+    case 9:  // retrig note
+      if (data !== 0) {
+        ch.retrig_interval = data;
+      }
+      break;
     case 0x0c:  // note cut handled in eff_t1_e
+      break;
+    case 0x0d:  // note delay handled in eff_t1_e
       break;
     default:
       console.log("unimplemented extended effect E", ch.effectdata.toString(16));
@@ -230,9 +237,14 @@ function eff_t0_e(ch, data) {  // extended effects!
   }
 }
 
-function eff_t1_e(ch) {  // note cut
+function eff_t1_e(ch) {  // extended effects tick 1+
   switch (ch.effectdata >> 4) {
-    case 0x0c:
+    case 9:  // retrig note
+      if (ch.retrig_interval && player.cur_tick % ch.retrig_interval === 0) {
+        ch.off = 0;
+      }
+      break;
+    case 0x0c:  // note cut
       if (player.cur_tick == (ch.effectdata & 0x0f)) {
         ch.vol = 0;
       }
