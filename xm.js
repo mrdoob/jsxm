@@ -218,6 +218,16 @@ function nextRow() {
         player.effects_t1[4](ch);  // and also call it on tick 0
       } else if (v >= 0xc0 && v < 0xd0) {  // set panning
         ch.pan = (v & 0x0f) * 0x11;
+      } else if (v >= 0xd0 && v < 0xe0) {  // panning slide left
+        ch.voleffectdata = v & 0x0f;
+        ch.voleffectfn = function(ch) {
+          ch.pan = Math.max(0, ch.pan - ch.voleffectdata);
+        };
+      } else if (v >= 0xe0 && v < 0xf0) {  // panning slide right
+        ch.voleffectdata = v & 0x0f;
+        ch.voleffectfn = function(ch) {
+          ch.pan = Math.min(255, ch.pan + ch.voleffectdata);
+        };
       } else if (v >= 0xf0 && v <= 0xff) {  // portamento
         if (v & 0x0f) {
           ch.portaspeed = (v & 0x0f) << 4;
