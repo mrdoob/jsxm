@@ -240,6 +240,16 @@ function nextRow() {
       console.log("channel", i, "effect > 36", ch.effect);
     }
 
+    // EDx note delay: suppress trigger on tick 0, store data for delayed trigger
+    if (ch.effect == 14 && (ch.effectdata >> 4) == 0x0d) {
+      ch.delaynote = {
+        note: ch.note,
+        inst: inst,
+        triggernote: triggernote
+      };
+      triggernote = false;
+    }
+
     // special handling for portamentos: don't trigger the note
     if (ch.effect == 3 || ch.effect == 5 || r[i][2] >= 0xf0) {
       if (r[i][0] != -1) {
@@ -279,6 +289,25 @@ function nextRow() {
     }
   }
 }
+
+function triggerNote(ch) {
+  var d = ch.delaynote;
+  if (!d || !d.triggernote) return;
+  var inst = d.inst;
+  if (!inst || !inst.samplemap) return;
+  if (ch.effect != 9) ch.off = 0;
+  ch.release = 0;
+  ch.envtick = 0;
+  ch.env_vol = new EnvelopeFollower(inst.env_vol);
+  ch.env_pan = new EnvelopeFollower(inst.env_pan);
+  if (d.note) {
+    ch.period = periodForNote(ch, d.note);
+  }
+  if (ch.vibratotype < 4) {
+    ch.vibratopos = 0;
+  }
+}
+player.triggerNote = triggerNote;
 
 function Envelope(points, type, sustain, loopstart, loopend) {
   this.points = points;

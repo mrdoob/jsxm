@@ -229,7 +229,7 @@ function eff_t0_e(ch, data) {  // extended effects!
       break;
     case 0x0c:  // note cut handled in eff_t1_e
       break;
-    case 0x0d:  // note delay handled in eff_t1_e
+    case 0x0d:  // note delay - handled in eff_t1_e and nextRow
       break;
     default:
       console.log("unimplemented extended effect E", ch.effectdata.toString(16));
@@ -247,6 +247,11 @@ function eff_t1_e(ch) {  // extended effects tick 1+
     case 0x0c:  // note cut
       if (player.cur_tick == (ch.effectdata & 0x0f)) {
         ch.vol = 0;
+      }
+      break;
+    case 0x0d:  // note delay
+      if (player.cur_tick === (ch.effectdata & 0x0f)) {
+        player.triggerNote(ch);
       }
       break;
   }
