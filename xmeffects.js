@@ -192,16 +192,11 @@ function eff_t0_e(ch, data) {  // extended effects!
       if (data == 0) {
         ch.loopstart = player.cur_row
       } else {
-        if (typeof ch.loopend === "undefined") {
-          ch.loopend = player.cur_row
-          ch.loopremaining = data
-        }
-        if(ch.loopremaining !== 0) {
-          ch.loopremaining--
-          player.next_row = ch.loopstart || 0
-        } else {
-          delete ch.loopend
-          delete ch.loopstart
+        if (ch.loopremaining === undefined || ch.loopremaining === 0) {
+          ch.loopremaining = data;
+          player.next_row = ch.loopstart || 0;
+        } else if (--ch.loopremaining > 0) {
+          player.next_row = ch.loopstart || 0;
         }
       }
       break;
