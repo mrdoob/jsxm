@@ -687,8 +687,10 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
       if (loop) {
         k = loopstart + (k - loopstart) % looplen;
       } else {
-        ch.inst = undefined;
-        ch.lastSample = samp[(k|0)] || 0;
+        // FT2: voice becomes inactive but channel data (inst/samp) persists.
+        // This allows Rxy retrig to restart the sample later.
+        ch.off = k;
+        ch.lastSample = samp[Math.min(k | 0, samp.length - 1)] || 0;
         ch.vL = vL; ch.vR = vR;
         return Vrms + MixSilenceIntoBuf(ch, i, end, dataL, dataR);
       }

@@ -332,13 +332,17 @@ function doMultiNoteRetrig(ch) {
     ch.retrigcounter = 0;
     retriggerVolume(ch);
     // FT2: after volume modification, volume column set-vol/set-pan overrides
-    if (ch.hasVolColumn) {
-      var v = ch.volColumnVol;
-      if (v >= 0x10 && v <= 0x50) {
-        ch.vol = v - 0x10;
-      } else if (v >= 0xc0 && v < 0xd0) {
-        ch.pan = (v & 0x0f) << 4;
-      }
+    if (ch.volColumnVol >= 0x10 && ch.volColumnVol <= 0x50) {
+      ch.vol = ch.volColumnVol - 0x10;
+    } else if (ch.volColumnVol >= 0xc0 && ch.volColumnVol <= 0xcf) {
+      ch.pan = (ch.volColumnVol & 0x0f) << 4;
+    }
+    // FT2: triggerNote(0,0,0,ch) — reset finetune and recalculate period
+    if (ch.samp) {
+      ch.fine = ch.samp.fine;
+    }
+    if (ch.note) {
+      ch.period = player.periodForNote(ch, ch.note);
     }
     // FT2: triggerNote restarts voice with quick volume ramp (crossfade)
     var qrs = player.quickRampSamples || 220;
