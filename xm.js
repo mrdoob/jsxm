@@ -164,19 +164,18 @@ function nextRow() {
     var inst = ch.inst;
     var triggernote = false;
     // instrument trigger
+    var instrumentOnly = false;
     if (r[i][1] != -1) {
       inst = player.xm.instruments[r[i][1] - 1];
       if (inst && inst.samplemap) {
         ch.inst = inst;
-        // retrigger unless overridden below
-        triggernote = true;
         if (ch.note && inst.samplemap) {
           ch.samp = inst.samples[inst.samplemap[ch.note]];
           ch.vol = ch.samp.vol;
           ch.pan = ch.samp.pan;
           ch.fine = ch.samp.fine;
         }
-      } else {
+        instrumentOnly = true;  // may be cleared if a note follows
       }
     }
 
@@ -184,21 +183,41 @@ function nextRow() {
     if (r[i][0] != -1) {
       if (r[i][0] == 96) {
         ch.release = 1;
-        triggernote = false;
+        instrumentOnly = false;
       } else {
         if (inst && inst.samplemap) {
           var note = r[i][0];
           ch.note = note;
           ch.samp = inst.samples[inst.samplemap[ch.note]];
-          if (triggernote) {
-            // if we were already triggering the note, reset vol/pan using
-            // (potentially) new sample
+          if (instrumentOnly) {
+            // instrument + note: reset vol/pan using the (potentially) new sample
             ch.pan = ch.samp.pan;
             ch.vol = ch.samp.vol;
             ch.fine = ch.samp.fine;
           }
           triggernote = true;
+          instrumentOnly = false;
         }
+      }
+    }
+
+    // FT2: instrument-only row (no note) resets envelopes/vol/pan but does NOT
+    // restart the voice — sample position continues from where it was
+    if (instrumentOnly) {
+      ch.release = 0;
+      ch.fadeOutVol = 32768;
+      ch.env_vol = new EnvelopeFollower(inst.env_vol);
+      ch.env_pan = new EnvelopeFollower(inst.env_pan);
+      if (ch.vibratotype < 4) {
+        ch.vibratopos = 0;
+      }
+      ch.autovibratopos = 0;
+      if (inst.vib_sweep > 0) {
+        ch.autoVibAmp = 0;
+        ch.autoVibSweepInc = ((inst.vib_depth << 8) / inst.vib_sweep) | 0;
+      } else {
+        ch.autoVibAmp = inst.vib_depth << 8;
+        ch.autoVibSweepInc = 0;
       }
     }
 
