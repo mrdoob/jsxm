@@ -150,24 +150,19 @@ function eff_t1_a(ch) {  // volume slide
   }
 }
 
-function eff_t0_b(ch, data) {  // song jump
-  if (data < player.xm.songpats.length) {
-    player.cur_songpos = data - 1;
-    player.cur_pat = -1;
-    player.cur_row = -1;
-  }
+function eff_t0_b(ch, data) {  // song jump (deferred)
+  player.posJumpFlag = true;
+  player.posJumpPos = data;
 }
 
 function eff_t0_c(ch, data) {  // set volume
   ch.vol = Math.min(64, data);
 }
 
-function eff_t0_d(ch, data) {  // pattern jump
-  player.cur_songpos++;
-  if (player.cur_songpos >= player.xm.songpats.length)
-    player.cur_songpos = player.xm.song_looppos;
-  player.cur_pat = player.xm.songpats[player.cur_songpos];
-  player.next_row = (data >> 4) * 10 + (data & 0x0f);
+function eff_t0_d(ch, data) {  // pattern break (deferred)
+  player.posJumpFlag = true;
+  player.pBreakPos = (data >> 4) * 10 + (data & 0x0f);
+  if (player.pBreakPos > 63) player.pBreakPos = 0;
 }
 
 function eff_t0_e(ch, data) {  // extended effects!

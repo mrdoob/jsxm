@@ -331,6 +331,21 @@ function nextRow() {
       ch.rampSamplesLeft = 0;
     }
   }
+  // resolve deferred Bxx/Dxx position jumps after all channels processed
+  if (player.posJumpFlag) {
+    if (player.posJumpPos !== undefined) {
+      player.cur_songpos = player.posJumpPos;
+    } else {
+      player.cur_songpos++;
+    }
+    if (player.cur_songpos >= player.xm.songpats.length)
+      player.cur_songpos = player.xm.song_looppos;
+    player.next_row = player.pBreakPos || 0;
+    setCurrentPattern();
+    player.posJumpFlag = false;
+    player.posJumpPos = undefined;
+    player.pBreakPos = undefined;
+  }
 }
 
 function triggerNote(ch) {
