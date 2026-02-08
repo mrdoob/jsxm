@@ -176,7 +176,7 @@ function nextRow() {
   player.cur_row = player.next_row;
   player.next_row++;
 
-  if (player.cur_pat == -1 || player.cur_row >= player.xm.patterns[player.cur_pat].length) {
+  if (player.cur_pat == -1 || player.cur_pat >= player.xm.patterns.length || player.cur_row >= player.xm.patterns[player.cur_pat].length) {
     player.cur_row = 0;
     player.next_row = 1;
     player.cur_songpos++;
