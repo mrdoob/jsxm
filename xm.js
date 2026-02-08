@@ -171,6 +171,23 @@ function setCurrentPattern() {
   player.cur_pat = nextPat;
 }
 
+function triggerInstrument(ch, inst) {
+  ch.release = 0;
+  ch.fadeOutVol = 32768;
+  ch.env_vol = new EnvelopeFollower(inst.env_vol);
+  ch.env_pan = new EnvelopeFollower(inst.env_pan);
+  ch.retrigcounter = 0;
+  if (ch.vibratotype < 4) ch.vibratopos = 0;
+  ch.autovibratopos = 0;
+  if (inst.vib_sweep > 0) {
+    ch.autoVibAmp = 0;
+    ch.autoVibSweepInc = ((inst.vib_depth << 8) / inst.vib_sweep) | 0;
+  } else {
+    ch.autoVibAmp = inst.vib_depth << 8;
+    ch.autoVibSweepInc = 0;
+  }
+}
+
 function nextRow() {
   if(typeof player.next_row === "undefined") { player.next_row = player.cur_row + 1; }
   player.cur_row = player.next_row;
@@ -260,22 +277,7 @@ function nextRow() {
             ch.pan = ch.samp.pan;
             ch.fine = ch.samp.fine;
           }
-          ch.release = 0;
-          ch.fadeOutVol = 32768;
-          ch.env_vol = new EnvelopeFollower(inst.env_vol);
-          ch.env_pan = new EnvelopeFollower(inst.env_pan);
-          ch.retrigcounter = 0;
-          if (ch.vibratotype < 4) {
-            ch.vibratopos = 0;
-          }
-          ch.autovibratopos = 0;
-          if (inst.vib_sweep > 0) {
-            ch.autoVibAmp = 0;
-            ch.autoVibSweepInc = ((inst.vib_depth << 8) / inst.vib_sweep) | 0;
-          } else {
-            ch.autoVibAmp = inst.vib_depth << 8;
-            ch.autoVibSweepInc = 0;
-          }
+          triggerInstrument(ch, inst);
         }
       }
     }
@@ -287,22 +289,7 @@ function nextRow() {
         ch.pan = ch.samp.pan;
         ch.fine = ch.samp.fine;
       }
-      ch.release = 0;
-      ch.fadeOutVol = 32768;
-      ch.env_vol = new EnvelopeFollower(inst.env_vol);
-      ch.env_pan = new EnvelopeFollower(inst.env_pan);
-      ch.retrigcounter = 0;
-      if (ch.vibratotype < 4) {
-        ch.vibratopos = 0;
-      }
-      ch.autovibratopos = 0;
-      if (inst.vib_sweep > 0) {
-        ch.autoVibAmp = 0;
-        ch.autoVibSweepInc = ((inst.vib_depth << 8) / inst.vib_sweep) | 0;
-      } else {
-        ch.autoVibAmp = inst.vib_depth << 8;
-        ch.autoVibSweepInc = 0;
-      }
+      triggerInstrument(ch, inst);
     }
 
     // FT2 order: triggerNote → resetVolumes → triggerInstrument → THEN effects
@@ -340,23 +327,7 @@ function nextRow() {
       if (hasNewInstrument) {
         ch.vol = ch.samp.vol;
         ch.pan = ch.samp.pan;
-        ch.release = 0;
-        ch.envtick = 0;
-        ch.fadeOutVol = 32768;
-        ch.env_vol = new EnvelopeFollower(inst.env_vol);
-        ch.env_pan = new EnvelopeFollower(inst.env_pan);
-        ch.retrigcounter = 0;
-        if (ch.vibratotype < 4) {
-          ch.vibratopos = 0;
-        }
-        ch.autovibratopos = 0;
-        if (inst.vib_sweep > 0) {
-          ch.autoVibAmp = 0;
-          ch.autoVibSweepInc = ((inst.vib_depth << 8) / inst.vib_sweep) | 0;
-        } else {
-          ch.autoVibAmp = inst.vib_depth << 8;
-          ch.autoVibSweepInc = 0;
-        }
+        triggerInstrument(ch, inst);
       }
       // new voice ramps up from zero
       ch.vL = 0; ch.vR = 0;
@@ -460,24 +431,9 @@ function triggerNote(ch) {
   } else {
     ch.off = 0;
   }
-  ch.release = 0;
-  ch.envtick = 0;
-  ch.fadeOutVol = 32768;
-  ch.env_vol = new EnvelopeFollower(inst.env_vol);
-  ch.env_pan = new EnvelopeFollower(inst.env_pan);
+  triggerInstrument(ch, inst);
   if (d.note) {
     ch.period = periodForNote(ch, d.note);
-  }
-  if (ch.vibratotype < 4) {
-    ch.vibratopos = 0;
-  }
-  ch.autovibratopos = 0;
-  if (inst.vib_sweep > 0) {
-    ch.autoVibAmp = 0;
-    ch.autoVibSweepInc = ((inst.vib_depth << 8) / inst.vib_sweep) | 0;
-  } else {
-    ch.autoVibAmp = inst.vib_depth << 8;
-    ch.autoVibSweepInc = 0;
   }
   // FT2: resetVolumes — restore vol/pan from sample (only when instrument present)
   if (d.hasInstrument && ch.samp) {
@@ -639,7 +595,6 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
   var loop = false;
   var looplen = 0, loopstart = 0;
 
-  // nothing on this channel, just filter the last dc offset back down to zero
   if (instsamp == undefined || inst == undefined || ch.mute) {
     return MixSilenceIntoBuf(ch, start, end, dataL, dataR);
   }
@@ -791,7 +746,6 @@ function audio_cb(e) {
   f_smp = player.audioctx.sampleRate;
   quickRampSamples = Math.round(f_smp / 200);
   player.quickRampSamples = quickRampSamples;
-  var time_sound_started;
   var buflen = e.outputBuffer.length;
   var dataL = e.outputBuffer.getChannelData(0);
   var dataR = e.outputBuffer.getChannelData(1);
@@ -977,7 +931,7 @@ function load(arrayBuf) {
     idx += 9;
     if (patsize > 0) {
       for (j = 0; j < patrows; j++) {
-        row = [];
+        var row = [];
         for (k = 0; k < player.xm.nchan; k++) {
           var byte0 = dv.getUint8(idx); idx++;
           var note = -1, inst = -1, vol = -1, efftype = 0, effparam = 0;
@@ -1017,7 +971,7 @@ function load(arrayBuf) {
     } else {
       // FT2: empty patterns (data size = 0) get default 64 rows of silence
       for (j = 0; j < patrows; j++) {
-        row = [];
+        var row = [];
         for (k = 0; k < player.xm.nchan; k++) {
           row.push([-1, -1, -1, 0, 0]);
         }
@@ -1063,8 +1017,6 @@ function load(arrayBuf) {
       for (j = 0; j < env_npan*2; j++) {
         env_pan.push(dv.getUint16(idx+177+j*2, true));
       }
-      // FIXME: ignoring keymaps for now and assuming 1 sample / instrument
-      // var keymap = getarray(dv, idx+0x21);
       var samphdrsiz = dv.getUint32(idx+0x1d, true);
       idx += hdrsiz;
       var totalsamples = 0;

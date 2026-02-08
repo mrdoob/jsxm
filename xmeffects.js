@@ -243,7 +243,6 @@ function eff_t0_e(ch, data) {  // extended effects!
 function eff_t1_e(ch) {  // extended effects tick 1+
   switch (ch.effectdata >> 4) {
     case 9:  // retrig note
-      // FT2: (speed - tick) counts 1,2,3... same as our cur_tick
       if (ch.retrig_interval && player.cur_tick % ch.retrig_interval === 0) {
         ch.off = 0;
         ch.release = 0;
@@ -459,7 +458,6 @@ function eff_t1_k(ch) {  // key off at tick
 }
 
 function eff_unimplemented() {}
-function eff_unimplemented_t0() {}
 
 player.effects_t0 = [  // effect functions on tick 0
   null,  // 0, arpeggio does nothing on tick 0 (FT2: dummy)
@@ -480,24 +478,24 @@ player.effects_t0 = [  // effect functions on tick 0
   eff_t0_f,  // f
   eff_t0_g,  // g
   eff_t0_h,  // h
-  eff_unimplemented_t0,  // i
-  eff_unimplemented_t0,  // j
+  eff_unimplemented,  // i
+  eff_unimplemented,  // j
   eff_t0_k,  // k
   eff_t0_l,  // l
-  eff_unimplemented_t0,  // m
-  eff_unimplemented_t0,  // n
-  eff_unimplemented_t0,  // o
+  eff_unimplemented,  // m
+  eff_unimplemented,  // n
+  eff_unimplemented,  // o
   eff_t0_p,  // p
-  eff_unimplemented_t0,  // q
+  eff_unimplemented,  // q
   eff_t0_r,  // r
-  eff_unimplemented_t0,  // s
+  eff_unimplemented,  // s
   eff_t0_t,  // t
-  eff_unimplemented_t0,  // u
-  eff_unimplemented_t0,  // v
-  eff_unimplemented_t0,  // w
+  eff_unimplemented,  // u
+  eff_unimplemented,  // v
+  eff_unimplemented,  // w
   eff_t0_x,  // x
-  eff_unimplemented_t0,  // y
-  eff_unimplemented_t0,  // z
+  eff_unimplemented,  // y
+  eff_unimplemented,  // z
 ];
 
 player.effects_t1 = [  // effect functions on tick 1+
