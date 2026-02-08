@@ -790,6 +790,7 @@ function audio_cb(e) {
     if (player.cur_pat == -1 || player.cur_ticksamp >= ticklen) {
       nextTick(f_smp);
       player.cur_ticksamp -= ticklen;
+      ticklen = f_smp * 2.5 / player.xm.bpm;  // recalculate after possible Fxx BPM change
     }
     var tickduration = Math.min(buflen, ((ticklen - player.cur_ticksamp) | 0) || 1);
     var VU = new Float32Array(player.xm.nchan);
