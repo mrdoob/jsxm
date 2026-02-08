@@ -550,7 +550,7 @@ function audio_cb(e) {
   }
 
   var offset = 0;
-  var ticklen = 0|(f_smp * 2.5 / player.xm.bpm);
+  var ticklen = f_smp * 2.5 / player.xm.bpm;
   var scopewidth = XMView.scope_width;
 
   while(buflen > 0) {
@@ -558,7 +558,7 @@ function audio_cb(e) {
       nextTick(f_smp);
       player.cur_ticksamp -= ticklen;
     }
-    var tickduration = Math.min(buflen, ticklen - player.cur_ticksamp);
+    var tickduration = Math.min(buflen, ((ticklen - player.cur_ticksamp) | 0) || 1);
     var VU = new Float32Array(player.xm.nchan);
     var scopes = undefined;
     for (j = 0; j < player.xm.nchan; j++) {
