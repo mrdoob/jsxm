@@ -107,6 +107,20 @@ function periodForNote(ch, note) {
   return 1920 - (note + ch.samp.note)*16 - ch.fine / 8.0;
 }
 
+function getAutoVibratoDelta(type, pos) {
+  switch (type) {
+    case 1: // square
+      return pos < 128 ? 1 : -1;
+    case 2: // ramp up
+      return ((pos + 128) & 255) / 128.0 - 1;
+    case 3: // ramp down
+      return 1 - pos / 128.0;
+    case 0: // sine
+    default:
+      return Math.sin(pos * Math.PI / 128);
+  }
+}
+
 function setCurrentPattern() {
   var nextPat = player.xm.songpats[player.cur_songpos];
 
@@ -297,6 +311,8 @@ function nextRow() {
       if (ch.vibratotype < 4) {
         ch.vibratopos = 0;
       }
+      ch.autovibratopos = 0;
+      ch.autovibratosweep = 0;
     }
   }
 }
@@ -318,6 +334,8 @@ function triggerNote(ch) {
   if (ch.vibratotype < 4) {
     ch.vibratopos = 0;
   }
+  ch.autovibratopos = 0;
+  ch.autovibratosweep = 0;
 }
 player.triggerNote = triggerNote;
 
@@ -418,7 +436,19 @@ function nextTick() {
     if (ch.release && inst.env_vol && (inst.env_vol.type & 1)) {
       ch.fadeOutVol = Math.max(0, ch.fadeOutVol - (inst.vol_fadeout || 0));
     }
-    updateChannelPeriod(ch, ch.period + ch.periodoffset);
+    // auto-vibrato: applied every tick, uses instrument parameters
+    var avPeriodOffset = 0;
+    if (inst.vib_depth && inst.vib_rate) {
+      // sweep gradually increases depth
+      if (!ch.release && inst.vib_sweep) {
+        ch.autovibratosweep = Math.min(ch.autovibratosweep + 1, inst.vib_sweep);
+      }
+      var sweepScale = inst.vib_sweep ? ch.autovibratosweep / inst.vib_sweep : 1;
+      var delta = getAutoVibratoDelta(inst.vib_type, ch.autovibratopos);
+      avPeriodOffset = delta * inst.vib_depth * sweepScale / 8;
+      ch.autovibratopos = (ch.autovibratopos + inst.vib_rate) & 255;
+    }
+    updateChannelPeriod(ch, ch.period + ch.periodoffset + avPeriodOffset);
   }
 }
 
@@ -766,6 +796,8 @@ function load(arrayBuf) {
       volE: 0, panE: 0,
       fadeOutVol: 65536,
       retrig: 0,
+      autovibratopos: 0,
+      autovibratosweep: 0,
       vibratopos: 0,
       vibratodepth: 1,
       vibratospeed: 1,
@@ -860,6 +892,10 @@ function load(arrayBuf) {
       var env_pan_loop_start = dv.getUint8(idx+231);
       var env_pan_loop_end = dv.getUint8(idx+232);
       var vol_fadeout = dv.getUint16(idx+239, true);
+      var vib_type = dv.getUint8(idx+235);
+      var vib_sweep = dv.getUint8(idx+236);
+      var vib_depth = dv.getUint8(idx+237);
+      var vib_rate = dv.getUint8(idx+238);
       var env_vol = [];
       for (j = 0; j < env_nvol*2; j++) {
         env_vol.push(dv.getUint16(idx+129+j*2, true));
@@ -928,6 +964,10 @@ function load(arrayBuf) {
       inst.samplemap = samplemap;
       inst.samples = samps;
       inst.vol_fadeout = vol_fadeout;
+      inst.vib_type = vib_type;
+      inst.vib_sweep = vib_sweep;
+      inst.vib_depth = vib_depth;
+      inst.vib_rate = vib_rate;
       if (env_vol_type) {
         inst.env_vol = new Envelope(
             env_vol,
