@@ -254,12 +254,14 @@ function eff_t1_e(ch) {  // extended effects tick 1+
       }
       break;
     case 0x0c:  // note cut
-      if (player.cur_tick == (ch.effectdata & 0x0f)) {
+      // FT2 uses (speed - tick) for comparison, not tick directly
+      if ((player.xm.tempo - player.cur_tick) == (ch.effectdata & 0x0f)) {
         ch.vol = 0;
       }
       break;
     case 0x0d:  // note delay
-      if (player.cur_tick === (ch.effectdata & 0x0f)) {
+      // FT2 uses (speed - tick) for comparison
+      if ((player.xm.tempo - player.cur_tick) === (ch.effectdata & 0x0f)) {
         player.triggerNote(ch);
       }
       break;
@@ -402,7 +404,8 @@ function eff_t0_k(ch, data) {  // key off at tick 0
 }
 
 function eff_t1_k(ch) {  // key off at tick
-  if (player.cur_tick === ch.effectdata) {
+  // FT2 uses (speed - tick) for comparison
+  if ((player.xm.tempo - player.cur_tick) === (ch.effectdata & 31)) {
     ch.release = 1;
   }
 }
