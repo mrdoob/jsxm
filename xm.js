@@ -501,7 +501,7 @@ function nextTick() {
           }
           ch.autoVibAmp = autoVibAmp;
         } else {
-          autoVibAmp = ch.autoVibSweepInc;  // FT2 quirk on key-off during sweep
+          autoVibAmp = ch.autoVibAmp;  // on key-off during sweep, use current amplitude
         }
       } else {
         autoVibAmp = ch.autoVibAmp;
