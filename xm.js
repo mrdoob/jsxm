@@ -497,8 +497,8 @@ EnvelopeFollower.prototype.Tick = function(release) {
   this.tick++;
   if (this.env.type & 4) {  // envelope loop
     if (this.tick >= this.env.loopend) {
-      // FT2: suppress loop when sustain point is at loop end and note is held
-      if ((this.env.type & 2) && this.env.loopendIndex === this.env.sustain && !release) {
+      // FT2: suppress loop when sustain point is at loop end and note is released
+      if ((this.env.type & 2) && this.env.loopendIndex === this.env.sustain && release) {
         // stay at sustain/loop end, don't loop back
       } else {
         this.tick -= this.env.loopend - this.env.loopstart;
