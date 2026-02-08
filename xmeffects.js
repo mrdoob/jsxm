@@ -243,7 +243,8 @@ function eff_t0_e(ch, data) {  // extended effects!
 function eff_t1_e(ch) {  // extended effects tick 1+
   switch (ch.effectdata >> 4) {
     case 9:  // retrig note
-      if (ch.retrig_interval && player.cur_tick % ch.retrig_interval === 0) {
+      // FT2 uses (speed - tick) % param, not tick % param
+      if (ch.retrig_interval && (player.xm.tempo - player.cur_tick) % ch.retrig_interval === 0) {
         ch.off = 0;
         ch.release = 0;
         ch.fadeOutVol = 32768;
