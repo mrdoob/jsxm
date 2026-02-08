@@ -133,7 +133,8 @@ function eff_t0_8(ch, data) {  // set panning
 }
 
 function eff_t0_9(ch, data) {  // sample offset
-  ch.off = data * 256;
+  if (data !== 0) ch.offsetmemory = data;
+  if (ch.offsetmemory) ch.off = ch.offsetmemory * 256;
 }
 
 function eff_t0_a(ch, data) {  // volume slide
@@ -173,9 +174,13 @@ function eff_t0_e(ch, data) {  // extended effects!
   data = data & 0x0f;
   switch (eff) {
     case 1:  // fine porta up
+      if (data !== 0) ch.fineportaup = data;
+      else data = ch.fineportaup || 0;
       ch.period -= data;
       break;
     case 2:  // fine porta down
+      if (data !== 0) ch.fineportadown = data;
+      else data = ch.fineportadown || 0;
       ch.period += data;
       break;
     case 3:  // glissando control
@@ -227,7 +232,8 @@ function eff_t0_e(ch, data) {  // extended effects!
         ch.retrig_interval = data;
       }
       break;
-    case 0x0c:  // note cut handled in eff_t1_e
+    case 0x0c:  // note cut at tick 0
+      if (data === 0) ch.vol = 0;
       break;
     case 0x0d:  // note delay - handled in eff_t1_e and nextRow
       break;
@@ -340,10 +346,15 @@ function eff_t1_p(ch) {  // panning slide
 }
 
 function eff_t0_x(ch, data) {  // extra fine portamento
+  var val = data & 0x0f;
   if ((data >> 4) === 1) {  // X1x - extra fine porta up
-    ch.period -= data & 0x0f;
+    if (val !== 0) ch.extrafineportaup = val;
+    else val = ch.extrafineportaup || 0;
+    ch.period -= val;
   } else if ((data >> 4) === 2) {  // X2x - extra fine porta down
-    ch.period += data & 0x0f;
+    if (val !== 0) ch.extrafineportadown = val;
+    else val = ch.extrafineportadown || 0;
+    ch.period += val;
   }
 }
 
@@ -371,6 +382,10 @@ function eff_t0_l(ch, data) {  // set envelope position
   if (ch.env_pan) {
     ch.env_pan.tick = data;
   }
+}
+
+function eff_t0_k(ch, data) {  // key off at tick 0
+  if (data === 0) ch.release = 1;
 }
 
 function eff_t1_k(ch) {  // key off at tick
@@ -405,7 +420,7 @@ player.effects_t0 = [  // effect functions on tick 0
   eff_t0_h,  // h
   eff_unimplemented_t0,  // i
   eff_unimplemented_t0,  // j
-  null,  // k
+  eff_t0_k,  // k
   eff_t0_l,  // l
   eff_unimplemented_t0,  // m
   eff_unimplemented_t0,  // n

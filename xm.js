@@ -287,6 +287,7 @@ function nextRow() {
       if (ch.effect != 9) ch.off = 0;
       ch.release = 0;
       ch.envtick = 0;
+      ch.fadeOutVol = 65536;
       ch.env_vol = new EnvelopeFollower(inst.env_vol);
       ch.env_pan = new EnvelopeFollower(inst.env_pan);
       if (ch.note) {
@@ -308,6 +309,7 @@ function triggerNote(ch) {
   if (ch.effect != 9) ch.off = 0;
   ch.release = 0;
   ch.envtick = 0;
+  ch.fadeOutVol = 65536;
   ch.env_vol = new EnvelopeFollower(inst.env_vol);
   ch.env_pan = new EnvelopeFollower(inst.env_pan);
   if (d.note) {
@@ -354,14 +356,14 @@ EnvelopeFollower.prototype.Tick = function(release) {
   var value = this.env.Get(this.tick);
 
   // if we're sustaining a note, stop advancing the tick counter
-  if (!release && this.tick >= this.env.points[this.env.sustain*2]) {
+  if (!release && (this.env.type & 2) &&
+      this.tick >= this.env.points[this.env.sustain*2]) {
     return this.env.points[this.env.sustain*2 + 1];
   }
 
   this.tick++;
-  if (this.env.type & 4) {  // envelope loop?
-    if (!release &&
-        this.tick >= this.env.loopend) {
+  if (this.env.type & 4) {  // envelope loop continues even after release
+    if (this.tick >= this.env.loopend) {
       this.tick -= this.env.loopend - this.env.loopstart;
     }
   }
@@ -412,6 +414,10 @@ function nextTick() {
     }
     ch.volE = ch.env_vol.Tick(ch.release);
     ch.panE = ch.env_pan.Tick(ch.release);
+    // process fadeout after key-off (only if volume envelope is enabled)
+    if (ch.release && inst.env_vol && (inst.env_vol.type & 1)) {
+      ch.fadeOutVol = Math.max(0, ch.fadeOutVol - (inst.vol_fadeout || 0));
+    }
     updateChannelPeriod(ch, ch.period + ch.periodoffset);
   }
 }
@@ -461,13 +467,14 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
     looplen = instsamp.looplen;
     sample_end = loopstart + looplen;
   }
-  var samplen = instsamp.len;
   var volE = ch.volE / 64.0;    // current volume envelope
-  var panE = 4*(ch.panE - 32);  // current panning envelope
-  var p = panE + ch.pan - 128;  // final pan
+  var fadeOut = (ch.fadeOutVol !== undefined ? ch.fadeOutVol : 65536) / 65536.0;
+  // panning formula from spec: FinalPan = Pan + ((EnvPan-32)*(128-|Pan-128|)/32)
+  var finalPan = ch.pan + (ch.panE - 32) * (128 - Math.abs(ch.pan - 128)) / 32;
+  var p = finalPan - 128;  // center around 0
   var vol = Math.max(0, Math.min(64, ch.vol + ch.voloffset));
-  var volL = player.xm.global_volume * volE * (128 - p) * vol / (64 * 128 * 128);
-  var volR = player.xm.global_volume * volE * (128 + p) * vol / (64 * 128 * 128);
+  var volL = player.xm.global_volume * fadeOut * volE * (128 - p) * vol / (64 * 128 * 128);
+  var volR = player.xm.global_volume * fadeOut * volE * (128 + p) * vol / (64 * 128 * 128);
   if (volL < 0) volL = 0;
   if (volR < 0) volR = 0;
   if (volR === 0 && volL === 0)
@@ -757,6 +764,7 @@ function load(arrayBuf) {
       vLprev: 0, vRprev: 0,
       mute: 0,
       volE: 0, panE: 0,
+      fadeOutVol: 65536,
       retrig: 0,
       vibratopos: 0,
       vibratodepth: 1,
@@ -919,17 +927,8 @@ function load(arrayBuf) {
       idx += totalsamples;
       inst.samplemap = samplemap;
       inst.samples = samps;
+      inst.vol_fadeout = vol_fadeout;
       if (env_vol_type) {
-        // insert an automatic fadeout to 0 at the end of the envelope
-        var env_end_tick = env_vol[env_vol.length-2];
-        if (!(env_vol_type & 2)) {  // if there's no sustain point, create one
-          env_vol_sustain = env_vol.length / 2;
-        }
-        if (vol_fadeout > 0) {
-          var fadeout_ticks = 65536.0 / vol_fadeout;
-          env_vol.push(env_end_tick + fadeout_ticks);
-          env_vol.push(0);
-        }
         inst.env_vol = new Envelope(
             env_vol,
             env_vol_type,
@@ -938,13 +937,10 @@ function load(arrayBuf) {
             env_vol_loop_end);
       } else {
         // no envelope, then just make a default full-volume envelope.
-        // i thought this would use fadeout, but apparently it doesn't.
+        // fadeout is not processed if volume envelope is disabled (per spec)
         inst.env_vol = new Envelope([0, 64, 1, 0], 2, 0, 0, 0);
       }
       if (env_pan_type) {
-        if (!(env_pan_type & 2)) {  // if there's no sustain point, create one
-          env_pan_sustain = env_pan.length / 2;
-        }
         inst.env_pan = new Envelope(
             env_pan,
             env_pan_type,
