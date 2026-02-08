@@ -464,8 +464,11 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
   var finalPan = ch.pan + (ch.panE - 32) * (128 - Math.abs(ch.pan - 128)) / 32;
   var p = finalPan - 128;  // center around 0
   var vol = Math.max(0, Math.min(64, ch.vol + ch.voloffset));
-  var volL = player.xm.global_volume * fadeOut * volE * (128 - p) * vol / (64 * 128 * 128);
-  var volR = player.xm.global_volume * fadeOut * volE * (128 + p) * vol / (64 * 128 * 128);
+  var panL = Math.max(0, Math.min(256, 128 - p));
+  var panR = Math.max(0, Math.min(256, 128 + p));
+  var globalVol = player.xm.global_volume;
+  var volL = globalVol * fadeOut * volE * Math.sqrt(panL / 256) * vol / (64 * 128);
+  var volR = globalVol * fadeOut * volE * Math.sqrt(panR / 256) * vol / (64 * 128);
   if (volL < 0) volL = 0;
   if (volR < 0) volR = 0;
   if (volR === 0 && volL === 0)
