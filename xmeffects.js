@@ -288,8 +288,12 @@ function eff_t0_g(ch, data) {  // set global volume
 
 function eff_t0_h(ch, data) {  // global volume slide
   if (data) {
-    // same as Axy but multiplied by 2
-    player.xm.global_volumeslide = (-(data & 0x0f) + (data >> 4)) * 2;
+    // FT2: high nibble takes priority (same rule as Axy), multiplied by 2
+    if (data & 0xf0) {
+      player.xm.global_volumeslide = (data >> 4) * 2;
+    } else {
+      player.xm.global_volumeslide = -(data & 0x0f) * 2;
+    }
   }
 }
 
@@ -349,7 +353,12 @@ function eff_t1_r(ch) {
 
 function eff_t0_p(ch, data) {  // panning slide
   if (data) {
-    ch.panslide = -(data & 0x0f) + (data >> 4);
+    // FT2: high nibble takes priority
+    if (data & 0xf0) {
+      ch.panslide = data >> 4;
+    } else {
+      ch.panslide = -(data & 0x0f);
+    }
   }
 }
 
