@@ -943,7 +943,7 @@ function load(arrayBuf) {
       inst.vib_sweep = vib_sweep;
       inst.vib_depth = vib_depth;
       inst.vib_rate = vib_rate;
-      if (env_vol_type) {
+      if (env_vol_type & 1) {
         inst.env_vol = new Envelope(
             env_vol,
             env_vol_type,
@@ -955,7 +955,7 @@ function load(arrayBuf) {
         // fadeout is not processed if volume envelope is disabled (per spec)
         inst.env_vol = new Envelope([0, 64, 1, 0], 2, 0, 0, 0);
       }
-      if (env_pan_type) {
+      if (env_pan_type & 1) {
         inst.env_pan = new Envelope(
             env_pan,
             env_pan_type,
