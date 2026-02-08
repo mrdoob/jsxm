@@ -633,9 +633,22 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
   var volR = globalVol * fadeOut * volE * Math.sqrt(panR / 256) * vol / (64 * 128);
   if (volL < 0) volL = 0;
   if (volR < 0) volR = 0;
-  if (volR === 0 && volL === 0)
-    return;
   if (isNaN(volR) || isNaN(volL)) return;
+  // FT2: advance sample position even when volume is zero (silenceMixRoutine).
+  // Only take the fast path when both current AND target volumes are zero;
+  // if current is non-zero we must fall through to ramp down properly.
+  if (volR === 0 && volL === 0 && ch.vL <= 0 && ch.vR <= 0) {
+    var numOutputSamples = end - start;
+    var newOff = ch.off + numOutputSamples * ch.doff;
+    if (newOff >= sample_end) {
+      if (loop) {
+        newOff = loopstart + ((newOff - loopstart) % looplen);
+      }
+      // non-looping: position past end, voice naturally done
+    }
+    ch.off = newOff;
+    return 0;
+  }
   var k = ch.off;
   var dk = ch.doff;
   var Vrms = 0;
@@ -659,8 +672,9 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
         // This allows Rxy retrig to restart the sample later.
         ch.off = k;
         ch.lastSample = samp[Math.min(k | 0, samp.length - 1)] || 0;
-        ch.vL = vL; ch.vR = vR;
-        return Vrms + MixSilenceIntoBuf(ch, i, end, dataL, dataR);
+        // snap to target volume (not mid-ramp) so silence path works on next tick
+        ch.vL = volL; ch.vR = volR;
+        return Vrms;
       }
     }
     var next_event = Math.max(1, Math.min(end, i + (sample_end - k) / dk));
