@@ -1059,7 +1059,7 @@ function init() {
     var audioContext = window.AudioContext || window.webkitAudioContext;
     player.audioctx = new audioContext();
     gainNode = player.audioctx.createGain();
-    gainNode.gain.value = 0.125;  // master volume (default for slider at 50%)
+    gainNode.gain.value = 0.1;  // master volume
   }
   if (player.audioctx.createScriptProcessor === undefined) {
     jsNode = player.audioctx.createJavaScriptNode(2048, 0, 2);
@@ -1068,6 +1068,7 @@ function init() {
   }
   jsNode.onaudioprocess = audio_cb;
   gainNode.connect(player.audioctx.destination);
+  player.gainNode = gainNode;
 }
 
 player.playing = false;
@@ -1110,9 +1111,4 @@ function stop() {
   init();
 }
 
-function setMasterVolume(v) {
-  if (gainNode) gainNode.gain.value = v;
-}
-
-player.setMasterVolume = setMasterVolume;
 })(window);
