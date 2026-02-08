@@ -178,6 +178,8 @@ function triggerInstrument(ch, inst) {
   ch.env_pan = new EnvelopeFollower(inst.env_pan);
   ch.retrigcounter = 0;
   if (ch.vibratotype < 4) ch.vibratopos = 0;
+  if (ch.tremolotype < 4) ch.tremolopos = 0;
+  ch.tremorPos = 0;
   ch.autovibratopos = 0;
   if (inst.vib_sweep > 0) {
     ch.autoVibAmp = 0;
