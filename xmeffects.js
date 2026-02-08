@@ -306,7 +306,7 @@ function retriggerVolume(ch) {
     case 3: ch.vol -= 4; break;
     case 4: ch.vol -= 8; break;
     case 5: ch.vol -= 16; break;
-    case 6: ch.vol = (ch.vol * 2 / 3) | 0; break;
+    case 6: ch.vol = (ch.vol >> 1) + (ch.vol >> 3) + (ch.vol >> 4); break;
     case 7: ch.vol = ch.vol >> 1; break;
     case 9: ch.vol += 1; break;
     case 0x0a: ch.vol += 2; break;
