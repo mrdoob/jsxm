@@ -225,6 +225,7 @@ function nextRow() {
     }
 
     ch.voleffectfn = undefined;
+    ch.hasVolColumn = (r[i][2] != -1);
     if (r[i][2] != -1) {  // volume column
       var v = r[i][2];
       ch.voleffectdata = v & 0x0f;

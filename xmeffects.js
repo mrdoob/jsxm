@@ -339,9 +339,12 @@ function retriggerNote(ch) {
 function eff_t0_r(ch, data) {  // retrigger
   if (data & 0x0f) ch.retrig = (ch.retrig & 0xf0) + (data & 0x0f);
   if (data & 0xf0) ch.retrig = (ch.retrig & 0x0f) + (data & 0xf0);
-  ch.retrigcounter = 0;
-  retriggerVolume(ch);
-  retriggerNote(ch);
+  // FT2 quirk: skip tick-0 retrigger when volume column has data
+  if (!ch.hasVolColumn) {
+    ch.retrigcounter = 0;
+    retriggerVolume(ch);
+    retriggerNote(ch);
+  }
 }
 
 function eff_t1_r(ch) {
