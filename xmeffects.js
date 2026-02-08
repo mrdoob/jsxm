@@ -71,11 +71,9 @@ function eff_t0_4(ch, data) {  // vibrato
 function eff_t1_4(ch) {  // vibrato
   ch.periodoffset = getVibratoDelta(ch.vibratotype, ch.vibratopos) * ch.vibratodepth;
   if (isNaN(ch.periodoffset)) ch.periodoffset = 0;
-  // only updates on non-first ticks
-  if (player.cur_tick > 0) {
-    ch.vibratopos += ch.vibratospeed;
-    ch.vibratopos &= 63;
-  }
+  // FT2 updates vibratoPos on every tick including tick 0
+  ch.vibratopos += ch.vibratospeed;
+  ch.vibratopos &= 63;
 }
 
 function getVibratoDelta(type, x) {
@@ -110,10 +108,9 @@ function eff_t1_7(ch) {  // tremolo
   // FT2: (vibratoTab[pos] * depth) >> 6, table values 0-255 with delta ±1.0
   // we need to scale by 4 to match FT2's effective range
   ch.voloffset = getVibratoDelta(ch.tremolotype, ch.tremolopos) * ch.tremolodepth * 4;
-  if (player.cur_tick > 0) {
-    ch.tremolopos += ch.tremolospeed;
-    ch.tremolopos &= 63;
-  }
+  // FT2 updates tremoloPos on every tick including tick 0
+  ch.tremolopos += ch.tremolospeed;
+  ch.tremolopos &= 63;
 }
 
 function eff_t1_5(ch) {  // portamento + volume slide
