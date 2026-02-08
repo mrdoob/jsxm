@@ -326,13 +326,38 @@ function retriggerVolume(ch) {
   ch.vol = Math.min(64, Math.max(0, ch.vol));
 }
 
-function retriggerNote(ch) {
-  ch.off = 0;
-  ch.release = 0;
-  ch.fadeOutVol = 32768;
-  if (ch.inst && ch.inst.env_vol) {
-    ch.env_vol = new player.EnvelopeFollower(ch.inst.env_vol);
-    ch.env_pan = new player.EnvelopeFollower(ch.inst.env_pan);
+// FT2: Rxy retrig calls triggerNote (voice restart + quick vol ramp),
+// NOT triggerInstrument. Envelopes, fadeout, and key-off are NOT reset.
+function doMultiNoteRetrig(ch) {
+  ch.retrigcounter = (ch.retrigcounter || 0) + 1;
+  if (ch.retrigcounter >= (ch.retrig & 0x0f)) {
+    ch.retrigcounter = 0;
+    retriggerVolume(ch);
+    // FT2: after volume modification, volume column set-vol/set-pan overrides
+    if (ch.hasVolColumn) {
+      var v = ch.volColumnVol;
+      if (v >= 0x10 && v <= 0x50) {
+        ch.vol = v - 0x10;
+      } else if (v >= 0xc0 && v < 0xd0) {
+        ch.pan = (v & 0x0f) << 4;
+      }
+    }
+    // FT2: triggerNote restarts voice with quick volume ramp (crossfade)
+    var qrs = player.quickRampSamples || 220;
+    if (ch.inst && ch.samp && ch.vL + ch.vR > 0) {
+      ch.fadeVoice = {
+        inst: ch.inst, samp: ch.samp,
+        off: ch.off, doff: ch.doff,
+        vL: ch.vL, vR: ch.vR,
+        volDeltaL: -ch.vL / qrs,
+        volDeltaR: -ch.vR / qrs,
+        rampSamplesLeft: qrs,
+        lastSample: ch.lastSample,
+      };
+    }
+    ch.off = 0;
+    ch.vL = 0; ch.vR = 0;
+    ch.rampSamplesLeft = 0;
   }
 }
 
@@ -341,19 +366,12 @@ function eff_t0_r(ch, data) {  // retrigger
   if (data & 0xf0) ch.retrig = (ch.retrig & 0x0f) + (data & 0xf0);
   // FT2 quirk: skip tick-0 retrigger when volume column has data
   if (!ch.hasVolColumn) {
-    ch.retrigcounter = 0;
-    retriggerVolume(ch);
-    retriggerNote(ch);
+    doMultiNoteRetrig(ch);
   }
 }
 
 function eff_t1_r(ch) {
-  ch.retrigcounter = (ch.retrigcounter || 0) + 1;
-  if (ch.retrigcounter >= (ch.retrig & 0x0f)) {
-    ch.retrigcounter = 0;
-    retriggerVolume(ch);
-    retriggerNote(ch);
-  }
+  doMultiNoteRetrig(ch);
 }
 
 function eff_t0_p(ch, data) {  // panning slide
