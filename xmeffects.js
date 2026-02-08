@@ -8,7 +8,7 @@ function eff_t1_0(ch) {  // arpeggio
   if (ch.effectdata !== 0 && ch.inst !== undefined) {
     var arpeggio = [0, ch.effectdata>>4, ch.effectdata&15];
     var note = ch.note + arpeggio[player.cur_tick % 3];
-    ch.period = player.periodForNote(ch, note);
+    ch.periodoffset = player.periodForNote(ch, note) - ch.period;
   }
 }
 
