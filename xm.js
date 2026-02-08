@@ -29,6 +29,7 @@ player.nextTick = nextTick;
 player.nextRow = nextRow;
 player.Envelope = Envelope;
 player.EnvelopeFollower = EnvelopeFollower;
+player.keyOff = keyOff;
 
 // for pretty-printing notes
 var _note_names = [
@@ -171,6 +172,16 @@ function setCurrentPattern() {
   player.cur_pat = nextPat;
 }
 
+// FT2 keyOff: set release flag and back up volume envelope tick by 1.
+// This ensures one extra sample of the sustain value before the envelope
+// progresses, matching FT2's exact key-off timing.
+function keyOff(ch) {
+  ch.release = 1;
+  if (ch.inst && (ch.inst.env_vol.type & 1) && ch.env_vol) {
+    if (ch.env_vol.tick > 0) ch.env_vol.tick--;
+  }
+}
+
 function triggerInstrument(ch, inst) {
   ch.release = 0;
   ch.fadeOutVol = 32768;
@@ -228,7 +239,7 @@ function nextRow() {
     // note trigger
     if (r[i][0] != -1) {
       if (r[i][0] == 96) {
-        ch.release = 1;
+        keyOff(ch);
         instrumentOnly = false;
       } else {
         if (inst && inst.samplemap) {

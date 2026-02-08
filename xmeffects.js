@@ -482,12 +482,12 @@ function eff_t0_l(ch, data) {  // set envelope position
 }
 
 function eff_t0_k(ch, data) {  // key off at tick 0
-  if (data === 0) ch.release = 1;
+  if (data === 0) player.keyOff(ch);
 }
 
 function eff_t1_k(ch) {  // key off at tick
   if (player.cur_tick === (ch.effectdata & 31)) {
-    ch.release = 1;
+    player.keyOff(ch);
   }
 }
 
