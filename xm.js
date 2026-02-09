@@ -281,7 +281,9 @@ function nextRow() {
         if (inst && inst.samplemap) {
           ch.note = r[i][0];
           ch.samp = inst.samples[inst.samplemap[ch.note]];
-          triggernote = true;
+          if (ch.samp) {
+            triggernote = true;
+          }
           instrumentOnly = false;
         }
       }
@@ -311,7 +313,7 @@ function nextRow() {
 
     // FT2: portamento check — BEFORE note trigger (preparePortamento + return)
     if (ch.effect == 3 || ch.effect == 5 || r[i][2] >= 0xf0) {
-      if (r[i][0] != -1 && r[i][0] != 96) {
+      if (r[i][0] != -1 && r[i][0] != 96 && ch.samp) {
         ch.periodtarget = periodForNote(ch, ch.note);
       }
       triggernote = false;
@@ -458,7 +460,7 @@ function triggerNote(ch) {
     ch.off = 0;
   }
   triggerInstrument(ch, inst);
-  if (d.note) {
+  if (d.note && ch.samp) {
     ch.period = periodForNote(ch, d.note);
   }
   // FT2: resetVolumes — restore vol/pan from sample (only when instrument present)
