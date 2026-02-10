@@ -361,7 +361,7 @@ function nextRow() {
       } else {
         ch.fine = ch.samp.fine;
       }
-      if (ch.note) {
+      if (ch.note !== undefined) {
         ch.period = periodForNote(ch, ch.note);
       }
       // resetVolumes + triggerInstrument: only when instrument present on this row
@@ -460,7 +460,7 @@ function triggerNote(ch) {
     ch.off = 0;
   }
   triggerInstrument(ch, inst);
-  if (d.note && ch.samp) {
+  if (d.note !== undefined && ch.samp) {
     ch.period = periodForNote(ch, d.note);
   }
   // FT2: resetVolumes — restore vol/pan from sample (only when instrument present)

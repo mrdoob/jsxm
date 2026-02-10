@@ -253,7 +253,7 @@ function eff_t1_e(ch) {  // extended effects tick 1+
         if (ch.samp) {
           ch.fine = ch.samp.fine;
         }
-        if (ch.note) {
+        if (ch.note !== undefined) {
           ch.period = player.periodForNote(ch, ch.note);
         }
         ch.off = 0;
@@ -350,7 +350,7 @@ function doMultiNoteRetrig(ch) {
     if (ch.samp) {
       ch.fine = ch.samp.fine;
     }
-    if (ch.note) {
+    if (ch.note !== undefined) {
       ch.period = player.periodForNote(ch, ch.note);
     }
     // FT2: triggerNote restarts voice with quick volume ramp (crossfade)
