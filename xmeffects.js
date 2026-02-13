@@ -257,8 +257,7 @@ function eff_t1_e(ch) {  // extended effects tick 1+
           ch.period = player.periodForNote(ch, ch.note);
         }
         ch.off = 0;
-        ch.vL = 0; ch.vR = 0;
-        ch.rampSamplesLeft = 0;
+        player.startVoiceQuickRamp(ch);
         // FT2: triggerInstrument(ch) — reset envelopes, fadeout, vibrato, etc.
         player.triggerInstrument(ch, inst);
       }
@@ -356,8 +355,7 @@ function doMultiNoteRetrig(ch) {
     // FT2: triggerNote restarts voice with quick volume ramp (crossfade)
     player.snapshotFadeVoice(ch);
     ch.off = 0;
-    ch.vL = 0; ch.vR = 0;
-    ch.rampSamplesLeft = 0;
+    player.startVoiceQuickRamp(ch);
   }
 }
 

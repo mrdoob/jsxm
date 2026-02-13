@@ -38,7 +38,8 @@ var _note_names = [
 
 var f_smp = 44100;  // updated by play callback, default value here
 
-var quickRampSamples = Math.round(f_smp / 200);  // ~5ms crossfade
+var quickRampSamples = Math.max(1, Math.round(f_smp / 200));  // ~5ms crossfade
+player.quickRampSamples = quickRampSamples;
 
 // Pre-allocated VU buffer for audio callback (sized on first use)
 var vuBuffer = null;
@@ -82,6 +83,21 @@ function getstring(dv, offset, len) {
   }
   return str.join('');
 }
+
+function getQuickRampSamples() {
+  var n = player.quickRampSamples;
+  if (typeof n !== "number" || !isFinite(n)) n = quickRampSamples;
+  n = n | 0;
+  if (n < 1) n = 1;
+  return n;
+}
+
+function startVoiceQuickRamp(ch) {
+  ch.vL = 0;
+  ch.vR = 0;
+  ch.rampSamplesLeft = getQuickRampSamples();
+}
+player.startVoiceQuickRamp = startVoiceQuickRamp;
 
 // Amiga period LUT (1936 entries, stored in 1/4-scale to match JS period convention)
 // FT2 formula: round(109568 / 2^((368+i)/192))
@@ -199,13 +215,14 @@ function keyOff(ch) {
 
 function snapshotFadeVoice(ch) {
   if (ch.inst && ch.samp && ch.vL + ch.vR > 0) {
+    var ramp = getQuickRampSamples();
     var fv = ch.fadeVoice || (ch.fadeVoice = {});
     fv.inst = ch.inst; fv.samp = ch.samp;
     fv.off = ch.off; fv.doff = ch.doff;
     fv.vL = ch.vL; fv.vR = ch.vR;
-    fv.volDeltaL = -ch.vL / quickRampSamples;
-    fv.volDeltaR = -ch.vR / quickRampSamples;
-    fv.rampSamplesLeft = quickRampSamples;
+    fv.volDeltaL = -ch.vL / ramp;
+    fv.volDeltaR = -ch.vR / ramp;
+    fv.rampSamplesLeft = ramp;
   }
 }
 player.snapshotFadeVoice = snapshotFadeVoice;
@@ -371,8 +388,7 @@ function nextRow() {
         triggerInstrument(ch, inst);
       }
       // new voice ramps up from zero
-      ch.vL = 0; ch.vR = 0;
-      ch.rampSamplesLeft = 0;
+      startVoiceQuickRamp(ch);
     }
 
     // handleEffects_TickZero: volume column effects (named functions defined above nextRow)
@@ -476,8 +492,7 @@ function triggerNote(ch) {
     ch.pan = (d.volColumn & 0x0f) << 4;
   }
   // new voice ramps up from zero
-  ch.vL = 0; ch.vR = 0;
-  ch.rampSamplesLeft = 0;
+  startVoiceQuickRamp(ch);
 }
 player.triggerNote = triggerNote;
 player.triggerInstrument = triggerInstrument;
@@ -661,23 +676,30 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
       // non-looping: position past end, voice naturally done
     }
     ch.off = newOff;
+    ch.rampSamplesLeft = 0;
     return 0;
   }
   // FT2: if position already past sample end (e.g. 9xx offset), voice is inactive
   if (ch.off >= sample_end) {
     ch.vL = volL; ch.vR = volR;
+    ch.rampSamplesLeft = 0;
     return 0;
   }
   var k = ch.off;
   var dk = ch.doff;
   var Vrms = 0;
 
-  // linear per-sample volume ramp (tick-length)
+  // linear per-sample volume ramp (tick-length, or quick note-on ramp)
   var ticklen = end - start;
   var vL = ch.vL;
   var vR = ch.vR;
-  var volDeltaL = (volL - vL) / ticklen;
-  var volDeltaR = (volR - vR) / ticklen;
+  var rampSamples = ticklen;
+  if (ch.rampSamplesLeft > 0) {
+    rampSamples = Math.min(rampSamples, ch.rampSamplesLeft);
+  }
+  var rampLeft = rampSamples;
+  var volDeltaL = (volL - vL) / rampSamples;
+  var volDeltaR = (volR - vR) / rampSamples;
 
   var i = start;
   var failsafe = 100;
@@ -693,14 +715,20 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
         ch.lastSample = samp[Math.min(k | 0, samp.length - 1)] || 0;
         // snap to target volume (not mid-ramp) so silence path works on next tick
         ch.vL = volL; ch.vR = volR;
+        ch.rampSamplesLeft = 0;
         return Vrms;
       }
     }
     var next_event = Math.max(1, Math.min(end, i + (sample_end - k) / dk));
+    var segEnd = next_event;
+    if (rampLeft > 0) {
+      segEnd = Math.min(segEnd, i + rampLeft);
+    }
+    var segStart = i;
 
     // unrolled 8x with linear interpolation
     var ki, kf, s;
-    for (; i + 7 < next_event; i+=8) {
+    for (; i + 7 < segEnd; i+=8) {
       ki=k|0; kf=k-ki; s=samp[ki]+(samp[ki+1]-samp[ki])*kf; k+=dk;
       dataL[i]+=vL*s; dataR[i]+=vR*s; Vrms+=(vL+vR)*s*s; vL+=volDeltaL; vR+=volDeltaR;
       ki=k|0; kf=k-ki; s=samp[ki]+(samp[ki+1]-samp[ki])*kf; k+=dk;
@@ -719,12 +747,23 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
       dataL[i+7]+=vL*s; dataR[i+7]+=vR*s; Vrms+=(vL+vR)*s*s; vL+=volDeltaL; vR+=volDeltaR;
     }
 
-    for (; i < next_event; i++) {
+    for (; i < segEnd; i++) {
       ki=k|0; kf=k-ki; s=samp[ki]+(samp[ki+1]-samp[ki])*kf;
       dataL[i]+=vL*s; dataR[i]+=vR*s;
       Vrms+=(vL+vR)*s*s;
       vL+=volDeltaL; vR+=volDeltaR;
       k+=dk;
+    }
+
+    if (rampLeft > 0) {
+      rampLeft -= segEnd - segStart;
+      if (rampLeft <= 0) {
+        rampLeft = 0;
+        vL = volL;
+        vR = volR;
+        volDeltaL = 0;
+        volDeltaR = 0;
+      }
     }
   }
   ch.off = k;
@@ -732,6 +771,7 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
   // snap to target to avoid float drift
   ch.vL = volL;
   ch.vR = volR;
+  ch.rampSamplesLeft = rampLeft;
   return Vrms * 0.5;
 }
 
@@ -1173,7 +1213,7 @@ function init() {
   }
   // compute quickRampSamples once from actual sample rate
   f_smp = player.audioctx.sampleRate;
-  quickRampSamples = Math.round(f_smp / 200);
+  quickRampSamples = Math.max(1, Math.round(f_smp / 200));
   player.quickRampSamples = quickRampSamples;
   if (player.audioctx.createScriptProcessor === undefined) {
     jsNode = player.audioctx.createJavaScriptNode(16384, 0, 2);
