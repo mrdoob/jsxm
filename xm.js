@@ -443,9 +443,9 @@ function nextRow() {
         ch.voleffectfn = panSlideRight;
       } else if (v >= 0xf0 && v <= 0xff) {  // portamento
         if (v & 0x0f) {
-          // FT2: vol column porta speed = nibble * 16 in full-scale periods
-          // (v_PortamentoStore overwrites the (param<<4)*4 from getNewNote)
-          ch.portaspeed = (v & 0x0f) * 4;
+          // FT2: vol column porta speed = (nibble<<4)*4 = nibble*64 in full-scale
+          // = nibble*16 in 1/4-scale periods
+          ch.portaspeed = (v & 0x0f) << 4;
         }
         ch.voleffectfn = player.effects_t1[3];  // just run 3x0
       }

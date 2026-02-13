@@ -125,8 +125,8 @@ function eff_t1_7(ch) {  // tremolo
       amp = player.vibratoSineLUT[idx];
       break;
   }
-  // FT2 bug: overall sign from vibratoPos (should be tremoloPos)
-  ch.voloffset = (ch.vibratopos >= 32 ? -amp : amp) * ch.tremolodepth * 4;
+  // Overall sign from tremoloPos (correct in FT2; the vibratoPos bug only affects ramp shape)
+  ch.voloffset = (ch.tremolopos >= 32 ? -amp : amp) * ch.tremolodepth * 4;
   ch.tremolopos += ch.tremolospeed;
   ch.tremolopos &= 63;
 }
