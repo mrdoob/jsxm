@@ -80,8 +80,9 @@ function eff_t1_4(ch) {  // vibrato
 function getVibratoDelta(type, x) {
   var delta = 0;
   switch (type & 0x03) {
-    case 1: // sawtooth (ramp-down)
-      delta = ((1 + x * 2 / 64) % 2) - 1;
+    case 1: // ramp (FT2: index<<3, then bitwise NOT for negative half)
+      var idx = x & 31;
+      delta = x < 32 ? (idx << 3) / 256 : -((255 - (idx << 3)) & 0xFF) / 256;
       break;
     case 2: // square
     case 3: // random (in FT2 these two are the same)

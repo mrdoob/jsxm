@@ -108,11 +108,18 @@ var amigaPeriodLUT = new Float64Array(1936);
   }
 })();
 
-// Vibrato sine LUT: 64 entries for getVibratoDelta sine waveform
+// FT2's exact vibrato/tremolo sine table (32 entries, half-wave, values 0-255)
+var vibratoTab = [
+  0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253,
+  255, 253, 250, 244, 235, 224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24
+];
+
+// Build 64-entry signed LUT from FT2's half-wave table (first half positive, second half negative)
 var vibratoSineLUT = new Float64Array(64);
 (function() {
-  for (var i = 0; i < 64; i++) {
-    vibratoSineLUT[i] = Math.sin(i * Math.PI / 32);
+  for (var i = 0; i < 32; i++) {
+    vibratoSineLUT[i] = vibratoTab[i] / 256;
+    vibratoSineLUT[i + 32] = -vibratoTab[i] / 256;
   }
 })();
 
