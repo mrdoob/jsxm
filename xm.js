@@ -778,7 +778,7 @@ function MixChannelIntoBuf(ch, start, end, dataL, dataR) {
 
     if (rampLeft > 0) {
       rampLeft -= segEnd - segStart;
-      if (rampLeft <= 0) {
+      if (rampLeft < 1) {
         rampLeft = 0;
         vL = volL;
         vR = volR;
