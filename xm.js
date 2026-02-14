@@ -41,8 +41,9 @@ var f_smp = 44100;  // updated by play callback, default value here
 var quickRampSamples = Math.max(1, Math.round(f_smp / 200));  // ~5ms crossfade
 player.quickRampSamples = quickRampSamples;
 
-// Pre-allocated VU buffer for audio callback (sized on first use)
+// Pre-allocated buffers for audio callback (sized on first use)
 var vuBuffer = null;
+var scopeBuffers = null;
 
 function prettify_note(note) {
   if (note < 0) return "---";
@@ -860,9 +861,15 @@ function audio_cb(e) {
     dataR[i] = 0;
   }
 
-  // ensure pre-allocated VU buffer matches channel count
+  // ensure pre-allocated buffers match channel count
   if (!vuBuffer || vuBuffer.length < nchan) {
     vuBuffer = new Float32Array(nchan);
+  }
+  if (!scopeBuffers || scopeBuffers.length < nchan) {
+    scopeBuffers = [];
+    for (i = 0; i < nchan; i++) {
+      scopeBuffers.push(new Float32Array(XMView.scope_width));
+    }
   }
 
   var offset = 0;
@@ -878,11 +885,10 @@ function audio_cb(e) {
     var tickduration = Math.min(buflen, ((ticklen - player.cur_ticksamp) | 0) || 1);
     // reuse pre-allocated VU buffer
     for (j = 0; j < nchan; j++) vuBuffer[j] = 0;
-    var scopes = undefined;
+    var captureScopes = tickduration >= 4*scopewidth;
     for (j = 0; j < nchan; j++) {
-      var scope;
-      if (tickduration >= 4*scopewidth) {
-        scope = new Float32Array(scopewidth);
+      if (captureScopes) {
+        var scope = scopeBuffers[j];
         for (k = 0; k < scopewidth; k++) {
           scope[k] = -dataL[offset+k*4] - dataR[offset+k*4];
         }
@@ -896,19 +902,18 @@ function audio_cb(e) {
         if (ch.fadeVoice.rampSamplesLeft <= 0) ch.fadeVoice = null;
       }
 
-      if (tickduration >= 4*scopewidth) {
+      if (captureScopes) {
+        var scope = scopeBuffers[j];
         for (k = 0; k < scopewidth; k++) {
           scope[k] += dataL[offset+k*4] + dataR[offset+k*4];
         }
-        if (scopes === undefined) scopes = [];
-        scopes.push(scope);
       }
     }
     if (XMView.pushEvent) {
       XMView.pushEvent({
         t: e.playbackTime + (0.0 + offset) / f_smp,
         vu: vuBuffer,
-        scopes: scopes,
+        scopes: captureScopes ? scopeBuffers : undefined,
         songpos: player.cur_songpos,
         pat: player.cur_pat,
         row: player.cur_row
